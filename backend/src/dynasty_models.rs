@@ -204,3 +204,207 @@ pub struct VirtualExperienceResult {
     pub dynasty_hint: String,
     pub historical_note: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dynasty_presets_count() {
+        let presets = DynastyGnomon::presets();
+        assert_eq!(presets.len(), 3);
+    }
+
+    #[test]
+    fn test_dynasty_presets_data_integrity() {
+        let presets = DynastyGnomon::presets();
+        let expected_ids = vec!["zhou_tugu", "han_tongbiao", "yuan_sizhang"];
+
+        for (i, p) in presets.iter().enumerate() {
+            assert_eq!(p.dynasty_id, expected_ids[i]);
+            assert!(!p.dynasty_name.is_empty());
+            assert!(!p.period.is_empty());
+            assert!(p.gauge_height_chi > 0.0);
+            assert!(!p.gauge_material.is_empty());
+            assert!(p.gauge_height_error_std_chi > 0.0);
+            assert!(p.shadow_reading_error_std_cun > 0.0);
+            assert!(!p.description.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_dynasty_gauge_height_scaling() {
+        let presets = DynastyGnomon::presets();
+        assert_eq!(presets[0].gauge_height_chi, 8.0);
+        assert_eq!(presets[1].gauge_height_chi, 8.0);
+        assert_eq!(presets[2].gauge_height_chi, 40.0);
+        assert_eq!(presets[2].gauge_height_chi / presets[0].gauge_height_chi, 5.0);
+    }
+
+    #[test]
+    fn test_dynasty_error_progression() {
+        let presets = DynastyGnomon::presets();
+        assert!(presets[0].gauge_height_error_std_chi > presets[1].gauge_height_error_std_chi);
+        assert!(presets[1].gauge_height_error_std_chi > presets[2].gauge_height_error_std_chi);
+        assert!(presets[0].shadow_reading_error_std_cun > presets[1].shadow_reading_error_std_cun);
+        assert!(presets[1].shadow_reading_error_std_cun > presets[2].shadow_reading_error_std_cun);
+    }
+
+    #[test]
+    fn test_meridian_presets_count() {
+        let presets = MeridianCircle::presets();
+        assert_eq!(presets.len(), 3);
+    }
+
+    #[test]
+    fn test_meridian_presets_data_integrity() {
+        let presets = MeridianCircle::presets();
+        let expected_ids = vec!["yuan_guibiao", "modern_meridian_1900", "modern_meridian_2000"];
+
+        for (i, p) in presets.iter().enumerate() {
+            assert_eq!(p.instrument_id, expected_ids[i]);
+            assert!(!p.instrument_name.is_empty());
+            assert!(!p.era.is_empty());
+            assert!(p.angle_resolution_arcsec > 0.0);
+            assert!(p.time_resolution_ms > 0.0);
+            assert!(p.systematic_error_arcsec > 0.0);
+            assert!(!p.description.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_meridian_resolution_progression() {
+        let presets = MeridianCircle::presets();
+        assert!(presets[0].angle_resolution_arcsec > presets[1].angle_resolution_arcsec);
+        assert!(presets[1].angle_resolution_arcsec > presets[2].angle_resolution_arcsec);
+        assert!(presets[0].systematic_error_arcsec > presets[1].systematic_error_arcsec);
+        assert!(presets[1].systematic_error_arcsec > presets[2].systematic_error_arcsec);
+        assert!(presets[0].time_resolution_ms > presets[1].time_resolution_ms);
+        assert!(presets[1].time_resolution_ms > presets[2].time_resolution_ms);
+    }
+
+    #[test]
+    fn test_meridian_technology_gap_ratios() {
+        let presets = MeridianCircle::presets();
+        let ratio_1900_1276 = presets[0].systematic_error_arcsec / presets[1].systematic_error_arcsec;
+        let ratio_2000_1276 = presets[0].systematic_error_arcsec / presets[2].systematic_error_arcsec;
+        let ratio_2000_1900 = presets[1].systematic_error_arcsec / presets[2].systematic_error_arcsec;
+
+        assert!(ratio_1900_1276 > 20.0, "1900年精度应比元代高20倍以上，实际{}倍", ratio_1900_1276);
+        assert!(ratio_2000_1276 > 500.0, "2000年精度应比元代高500倍以上，实际{}倍", ratio_2000_1276);
+        assert!(ratio_2000_1900 > 10.0, "2000年精度应比1900年高10倍以上，实际{}倍", ratio_2000_1900);
+    }
+
+    #[test]
+    fn test_meridian_ids_are_unique() {
+        let presets = MeridianCircle::presets();
+        let ids: Vec<&String> = presets.iter().map(|p| &p.instrument_id).collect();
+        assert_eq!(ids[0], "yuan_guibiao");
+        assert_eq!(ids[1], "modern_meridian_1900");
+        assert_eq!(ids[2], "modern_meridian_2000");
+    }
+
+    #[test]
+    fn test_dynasty_gnomon_serialization() {
+        let preset = &DynastyGnomon::presets()[0];
+        let json = serde_json::to_string(preset).expect("序列化失败");
+        let deserialized: DynastyGnomon = serde_json::from_str(&json).expect("反序列化失败");
+        assert_eq!(preset.dynasty_id, deserialized.dynasty_id);
+        assert_eq!(preset.gauge_height_chi, deserialized.gauge_height_chi);
+    }
+
+    #[test]
+    fn test_meridian_circle_serialization() {
+        let preset = &MeridianCircle::presets()[0];
+        let json = serde_json::to_string(preset).expect("序列化失败");
+        let deserialized: MeridianCircle = serde_json::from_str(&json).expect("反序列化失败");
+        assert_eq!(preset.instrument_id, deserialized.instrument_id);
+        assert_eq!(preset.angle_resolution_arcsec, deserialized.angle_resolution_arcsec);
+    }
+
+    #[test]
+    fn test_pinhole_request_default_values() {
+        let req = PinholeRequest {
+            gauge_height_chi: 40.0,
+            pinhole_diameter_cun: 1.0,
+            sun_altitude: 26.0,
+            screen_distance_chi: 40.0,
+            temperature: 5.0,
+            pressure: 1013.25,
+        };
+        assert_eq!(req.gauge_height_chi, 40.0);
+        assert_eq!(req.pinhole_diameter_cun, 1.0);
+    }
+
+    #[test]
+    fn test_pinhole_result_fields() {
+        let result = PinholeResult {
+            pinhole_diameter_cun: 1.0,
+            sun_image_diameter_cun: 0.5,
+            geometric_blur_cun: 0.1,
+            diffraction_blur_cun: 0.05,
+            total_blur_cun: 0.1118,
+            optimal_diameter_cun: 0.2,
+            signal_to_noise_ratio: 10.0,
+            shadow_edge_sharpness: 0.8,
+            altitude_resolution_arcmin: 0.5,
+            magnification: 1.0,
+            vignetting_factor: 0.95,
+        };
+        assert!(result.shadow_edge_sharpness >= 0.0 && result.shadow_edge_sharpness <= 1.0);
+        assert!(result.vignetting_factor >= 0.0 && result.vignetting_factor <= 1.0);
+        assert!(result.signal_to_noise_ratio > 0.0);
+    }
+
+    #[test]
+    fn test_virtual_experience_request_bounds() {
+        let req = VirtualExperienceRequest {
+            gauge_height_chi: 40.0,
+            latitude: 34.49,
+            month: 12,
+            day: 22,
+            hour: 12.0,
+            temperature: 0.0,
+            pressure: 1013.0,
+            humidity: 40.0,
+        };
+        assert!(req.month >= 1 && req.month <= 12);
+        assert!(req.day >= 1 && req.day <= 31);
+        assert!(req.hour >= 0.0 && req.hour <= 24.0);
+    }
+
+    #[test]
+    fn test_dynasty_comparison_request_valid_range() {
+        let req = DynastyComparisonRequest {
+            sun_altitude: 26.0,
+            temperature: 5.0,
+            pressure: 1013.25,
+            humidity: 50.0,
+        };
+        assert!(req.sun_altitude >= -90.0 && req.sun_altitude <= 90.0);
+        assert!(req.pressure >= 500.0 && req.pressure <= 1100.0);
+        assert!(req.humidity >= 0.0 && req.humidity <= 100.0);
+    }
+
+    #[test]
+    fn test_meridian_comparison_request_valid_range() {
+        let req = MeridianComparisonRequest {
+            sun_altitude: 26.0,
+            temperature: 5.0,
+            pressure: 1013.25,
+        };
+        assert!(req.sun_altitude >= -90.0 && req.sun_altitude <= 90.0);
+        assert!(req.temperature >= -40.0 && req.temperature <= 60.0);
+    }
+
+    #[test]
+    fn test_dynasty_gnomon_latitude_range() {
+        let presets = DynastyGnomon::presets();
+        for p in &presets {
+            assert!(p.latitude >= 0.0 && p.latitude <= 90.0,
+                "纬度应在北半球: {}", p.latitude);
+            assert!(p.longitude >= 73.0 && p.longitude <= 135.0,
+                "经度应在中国范围内: {}", p.longitude);
+        }
+    }
+}
