@@ -9,6 +9,8 @@ pub struct DynastyGnomon {
     pub dynasty_name: String,
     pub period: String,
     pub gauge_height_chi: f64,
+    pub chi_to_m_conversion: f64,
+    pub gauge_height_m_actual: f64,
     pub gauge_material: String,
     pub gauge_height_error_std_chi: f64,
     pub shadow_reading_error_std_cun: f64,
@@ -16,6 +18,7 @@ pub struct DynastyGnomon {
     pub longitude: f64,
     pub altitude: f64,
     pub description: String,
+    pub archaeological_source: String,
 }
 
 impl DynastyGnomon {
@@ -26,39 +29,48 @@ impl DynastyGnomon {
                 dynasty_name: "周代土圭".to_string(),
                 period: "公元前11世纪—前256年".to_string(),
                 gauge_height_chi: 8.0,
-                gauge_material: "土筑".to_string(),
+                chi_to_m_conversion: 0.231,
+                gauge_height_m_actual: 1.848,
+                gauge_material: "土筑/木质".to_string(),
                 gauge_height_error_std_chi: 0.1,
                 shadow_reading_error_std_cun: 2.0,
                 latitude: 34.25,
                 longitude: 108.93,
                 altitude: 400.0,
-                description: "《周礼》载土圭之法，表高八尺，以土筑成，精度受限".to_string(),
+                description: "《周礼·考工记》载'土圭尺有五寸，以至日景'，洛阳金村出土战国铜尺实测23.1cm，八尺表高合1.848米".to_string(),
+                archaeological_source: "考古依据：河南洛阳金村战国墓出土铜尺，长23.1cm；《周礼·地官·大司徒》".to_string(),
             },
             Self {
                 dynasty_id: "han_tongbiao".to_string(),
                 dynasty_name: "汉代铜表".to_string(),
                 period: "公元前206年—公元220年".to_string(),
                 gauge_height_chi: 8.0,
+                chi_to_m_conversion: 0.233,
+                gauge_height_m_actual: 1.864,
                 gauge_material: "青铜铸造".to_string(),
                 gauge_height_error_std_chi: 0.02,
                 shadow_reading_error_std_cun: 0.5,
                 latitude: 34.26,
                 longitude: 108.94,
                 altitude: 405.0,
-                description: "汉代以铜铸表，表高八尺，材质稳定，刻度精确".to_string(),
+                description: "汉承秦制，西汉骨尺23.1-23.2cm，东汉鎏金铜尺23.5cm。汉代铜表刻寸分刻度，读数精度优于周代".to_string(),
+                archaeological_source: "考古依据：湖南长沙左家山出土西汉骨尺23.2cm；洛阳出土东汉铜尺23.5cm；《史记·天官书》".to_string(),
             },
             Self {
                 dynasty_id: "yuan_sizhang".to_string(),
                 dynasty_name: "元代四丈高表".to_string(),
                 period: "1276年—1368年".to_string(),
                 gauge_height_chi: 40.0,
+                chi_to_m_conversion: 0.2365,
+                gauge_height_m_actual: 9.46,
                 gauge_material: "砖石砌筑+铜横梁".to_string(),
                 gauge_height_error_std_chi: 0.01,
                 shadow_reading_error_std_cun: 0.2,
                 latitude: 34.4897,
                 longitude: 113.0875,
                 altitude: 420.0,
-                description: "郭守敬建登封观星台，表高四丈(40尺)，横梁针孔成像，精度达古代巅峰".to_string(),
+                description: "郭守敬至元十三年(1276)建登封观星台，台面至横梁实测高9.46米，合40×0.2365m。横梁配针孔成像(景符)，读数精度达0.1-0.2分".to_string(),
+                archaeological_source: "考古依据：登封观星台考古实测，台面至铜梁高9.46米；《元史·天文志》'立表高四丈'；潘鼐《中国恒星观测史》".to_string(),
             },
         ]
     }
@@ -77,6 +89,8 @@ pub struct DynastyComparisonResult {
     pub dynasty_id: String,
     pub dynasty_name: String,
     pub gauge_height_chi: f64,
+    pub gauge_height_m_actual: f64,
+    pub chi_to_m_conversion: f64,
     pub gauge_material: String,
     pub theoretical_shadow_chi: f64,
     pub refracted_shadow_chi: f64,
@@ -84,6 +98,7 @@ pub struct DynastyComparisonResult {
     pub shadow_precision_cun: f64,
     pub solstice_precision_seconds: f64,
     pub altitude_resolution_arcmin: f64,
+    pub archaeological_source: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,7 +109,9 @@ pub struct MeridianCircle {
     pub angle_resolution_arcsec: f64,
     pub time_resolution_ms: f64,
     pub systematic_error_arcsec: f64,
+    pub random_error_arcsec: f64,
     pub description: String,
+    pub reference: String,
 }
 
 impl MeridianCircle {
@@ -107,16 +124,20 @@ impl MeridianCircle {
                 angle_resolution_arcsec: 60.0,
                 time_resolution_ms: 60000,
                 systematic_error_arcsec: 30.0,
-                description: "郭守敬高表，影长分辨率约1分，角度分辨率约1角分".to_string(),
+                random_error_arcsec: 20.0,
+                description: "郭守敬登封观星台四丈高表，影长分辨率约1分(0.1寸)，角度分辨率约1角分，配景符针孔成像".to_string(),
+                reference: "《元史·天文志》；潘鼐《中国恒星观测史》；登封观星台考古报告".to_string(),
             },
             Self {
                 instrument_id: "modern_meridian_1900".to_string(),
                 instrument_name: "20世纪初子午环".to_string(),
                 era: "1900".to_string(),
-                angle_resolution_arcsec: 0.5,
+                angle_resolution_arcsec: 0.2,
                 time_resolution_ms: 100,
-                systematic_error_arcsec: 1.0,
-                description: "经典光学子午环，测微显微镜读数，精度约0.5角秒".to_string(),
+                systematic_error_arcsec: 0.5,
+                random_error_arcsec: 0.15,
+                description: "经典光学子午环（如普尔科沃/格林尼治天文台），测微目镜读数，物镜口径10-20cm，焦距3-5m".to_string(),
+                reference: "IAU 1976天文常数系统；《球面天文学》；格林尼治皇家天文台年报".to_string(),
             },
             Self {
                 instrument_id: "modern_meridian_2000".to_string(),
@@ -124,8 +145,10 @@ impl MeridianCircle {
                 era: "2000".to_string(),
                 angle_resolution_arcsec: 0.01,
                 time_resolution_ms: 1,
-                systematic_error_arcsec: 0.05,
-                description: "CCD光电读数子午环，精度达0.01角秒级别".to_string(),
+                systematic_error_arcsec: 0.03,
+                random_error_arcsec: 0.005,
+                description: "CCD光电子午环（如USNO、上海天文台光电等高仪），CCD像素细分+自动导星，精度达毫角秒级".to_string(),
+                reference: "USNO UCAC4星表精度±15mas； Hipparcos星表±1mas；IAU 2000分辨率".to_string(),
             },
         ]
     }
@@ -145,11 +168,14 @@ pub struct MeridianComparisonResult {
     pub era: String,
     pub measured_altitude_deg: f64,
     pub altitude_error_arcsec: f64,
-    pub shadow_length_if_gnomon_chi: f64,
+    pub systematic_error_arcsec: f64,
+    pub random_error_arcsec: f64,
+    pub shadow_length_if_gnomom_chi: f64,
     pub shadow_error_cun: f64,
     pub solstice_time_error_seconds: f64,
     pub refraction_correction_arcsec: f64,
     pub technology_gap_factor: f64,
+    pub reference: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,15 +192,20 @@ pub struct PinholeRequest {
 pub struct PinholeResult {
     pub pinhole_diameter_cun: f64,
     pub sun_image_diameter_cun: f64,
+    pub solar_umbra_blur_cun: f64,
     pub geometric_blur_cun: f64,
     pub diffraction_blur_cun: f64,
     pub total_blur_cun: f64,
     pub optimal_diameter_cun: f64,
+    pub airy_disk_radius_cun: f64,
+    pub f_number: f64,
     pub signal_to_noise_ratio: f64,
     pub shadow_edge_sharpness: f64,
+    pub modulation_transfer_function: f64,
     pub altitude_resolution_arcmin: f64,
     pub magnification: f64,
     pub vignetting_factor: f64,
+    pub physics_model_note: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,6 +218,7 @@ pub struct VirtualExperienceRequest {
     pub temperature: f64,
     pub pressure: f64,
     pub humidity: f64,
+    pub time_acceleration: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,6 +233,29 @@ pub struct VirtualExperienceResult {
     pub refraction_correction_arcsec: f64,
     pub shadow_length_cun: f64,
     pub is_daytime: bool,
+    pub dynasty_hint: String,
+    pub historical_note: String,
+    pub time_acceleration_applied: u32,
+    pub next_frame_hour: f64,
+    pub local_solar_time_hour: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VirtualTimeSeriesPoint {
+    pub hour: f64,
+    pub sun_altitude: f64,
+    pub shadow_chi: f64,
+    pub is_daytime: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VirtualTimeSeriesResponse {
+    pub points: Vec<VirtualTimeSeriesPoint>,
+    pub sunrise_hour: f64,
+    pub sunset_hour: f64,
+    pub noon_altitude: f64,
+    pub total_daylight_hours: f64,
+    pub time_acceleration: u32,
     pub dynasty_hint: String,
     pub historical_note: String,
 }

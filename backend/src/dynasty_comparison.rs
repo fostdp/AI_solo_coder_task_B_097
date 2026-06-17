@@ -60,6 +60,8 @@ impl DynastyComparator {
                 dynasty_id: gnomon.dynasty_id.clone(),
                 dynasty_name: gnomon.dynasty_name.clone(),
                 gauge_height_chi: gnomon.gauge_height_chi,
+                gauge_height_m_actual: gnomon.gauge_height_m_actual,
+                chi_to_m_conversion: gnomon.chi_to_m_conversion,
                 gauge_material: gnomon.gauge_material.clone(),
                 theoretical_shadow_chi: theoretical_shadow,
                 refracted_shadow_chi: refracted_shadow,
@@ -67,6 +69,7 @@ impl DynastyComparator {
                 shadow_precision_cun,
                 solstice_precision_seconds,
                 altitude_resolution_arcmin: alt_resolution_arcmin,
+                archaeological_source: gnomon.archaeological_source.clone(),
             });
         }
 
@@ -114,8 +117,12 @@ impl MeridianComparator {
                 request.pressure,
             );
 
-            let altitude_error = instrument.systematic_error_arcsec;
-            let measured_alt = request.sun_altitude + altitude_error * ARCSEC_TO_DEG;
+            let total_altitude_error = (
+                instrument.systematic_error_arcsec.powi(2)
+                + instrument.random_error_arcsec.powi(2)
+            ).sqrt();
+
+            let measured_alt = request.sun_altitude + total_altitude_error * ARCSEC_TO_DEG;
 
             let shadow_length = if instrument.era == "1276" {
                 sim.shadow_length_from_altitude(40.0, measured_alt)
@@ -123,11 +130,11 @@ impl MeridianComparator {
                 sim.shadow_length_from_altitude(40.0, request.sun_altitude)
             };
 
-            let shadow_error_cun = altitude_error * ARCSEC_TO_DEG
+            let shadow_error_cun = total_altitude_error * ARCSEC_TO_DEG
                 * 40.0 / (request.sun_altitude.max(1.0) * DEG_TO_RAD).sin().powi(2)
                 * CHI_TO_CUN;
 
-            let solstice_error = altitude_error * ARCSEC_TO_DEG
+            let solstice_error = total_altitude_error * ARCSEC_TO_DEG
                 * 86400.0 / (2.0 * std::f64::consts::PI / 365.25)
                 / (request.sun_altitude.max(1.0) * DEG_TO_RAD).tan();
 
@@ -136,9 +143,9 @@ impl MeridianComparator {
             } else {
                 let baseline = presets.iter()
                     .find(|p| p.era == "1276")
-                    .map(|p| p.systematic_error_arcsec)
+                    .map(|p| (p.systematic_error_arcsec.powi(2) + p.random_error_arcsec.powi(2)).sqrt())
                     .unwrap_or(60.0);
-                baseline / instrument.systematic_error_arcsec
+                baseline / total_altitude_error
             };
 
             results.push(MeridianComparisonResult {
@@ -146,12 +153,15 @@ impl MeridianComparator {
                 instrument_name: instrument.instrument_name.clone(),
                 era: instrument.era.clone(),
                 measured_altitude_deg: measured_alt,
-                altitude_error_arcsec: altitude_error,
+                altitude_error_arcsec: total_altitude_error,
+                systematic_error_arcsec: instrument.systematic_error_arcsec,
+                random_error_arcsec: instrument.random_error_arcsec,
                 shadow_length_if_gnomom_chi: shadow_length,
                 shadow_error_cun,
                 solstice_time_error_seconds: solstice_error,
                 refraction_correction_arcsec: refraction_arcsec,
                 technology_gap_factor: gap_factor,
+                reference: instrument.reference.clone(),
             });
         }
 
@@ -163,22 +173,34 @@ pub struct PinholeSimulator;
 
 impl PinholeSimulator {
     pub fn simulate(request: &PinholeRequest) -> PinholeResult {
-        let d_m = request.pinhole_diameter_cun * CUN_TO_M;
+        let d_m = request.pinhole_diameter_cun.abs().max(1e-9) * CUN_TO_M;
         let h_m = request.gauge_height_chi * CHI_TO_M;
         let s_m = request.screen_distance_chi * CHI_TO_M;
         let alt_rad = request.sun_altitude.max(0.1) * DEG_TO_RAD;
 
-        let sun_angular_diameter_rad = 0.00930; // ~31.6 arcmin = 0.533 deg
+        let sun_angular_diameter_rad = 0.00930;
+
+        let solar_umbra_m = sun_angular_diameter_rad * s_m;
+        let solar_umbra_cun = solar_umbra_m / CUN_TO_M;
 
         let geometric_blur_m = d_m * s_m / h_m;
         let geometric_blur_cun = geometric_blur_m / CUN_TO_M;
 
         let wavelength_m = WAVELENGTH_NM * 1e-9;
         let diffraction_blur_rad = 1.22 * wavelength_m / d_m;
-        let diffraction_blur_m = diffraction_blur_rad * s_m;
+        let airy_radius_m = diffraction_blur_rad * s_m;
+        let diffraction_blur_m = airy_radius_m;
         let diffraction_blur_cun = diffraction_blur_m / CUN_TO_M;
+        let airy_disk_radius_cun = airy_radius_m / CUN_TO_M;
 
-        let total_blur_cun = (geometric_blur_cun.powi(2) + diffraction_blur_cun.powi(2)).sqrt();
+        let f_number = h_m / d_m;
+
+        let total_blur_m = (
+            solar_umbra_m.powi(2)
+            + geometric_blur_m.powi(2)
+            + diffraction_blur_m.powi(2)
+        ).sqrt();
+        let total_blur_cun = total_blur_m / CUN_TO_M;
 
         let optimal_diameter_m = (1.22 * wavelength_m * h_m).sqrt();
         let optimal_diameter_cun = optimal_diameter_m / CUN_TO_M;
@@ -194,24 +216,49 @@ impl PinholeSimulator {
 
         let shadow_edge_sharpness = 1.0 / (1.0 + (total_blur_cun / sun_image_diameter_cun.max(0.001)).powi(2));
 
+        let cutoff_freq = d_m / (wavelength_m * h_m);
+        let mtf_reference_freq = 0.5 * cutoff_freq;
+        let modulation_transfer_function = if mtf_reference_freq > 0.0 {
+            let x = 1.22 * std::f64::consts::PI * mtf_reference_freq * wavelength_m * h_m / d_m;
+            if x.abs() < 1e-6 {
+                1.0
+            } else {
+                let j1 = x.sin() / x - x.cos();
+                2.0 * j1 / x
+            }
+        } else {
+            0.0
+        }.abs().min(1.0);
+
         let alt_resolution_rad = total_blur_cun / (CHI_TO_CUN * request.gauge_height_chi);
         let alt_resolution_arcmin = alt_resolution_rad * (180.0 / std::f64::consts::PI) * 60.0;
 
         let cos_alt = alt_rad.cos();
         let vignetting = (1.0 - (d_m / (2.0 * h_m * cos_alt)).powi(2)).max(0.0);
 
+        let physics_model_note = format!(
+            "物理光学模型：太阳本影模糊(θ☉·s) + 几何模糊(d·s/h) + 夫琅禾费衍射(1.22λ/D·s)；\
+             瑞利判据爱里斑；截止频率f_c=D/(λh)；F数={:.1}",
+            f_number
+        );
+
         PinholeResult {
             pinhole_diameter_cun: request.pinhole_diameter_cun,
             sun_image_diameter_cun,
+            solar_umbra_blur_cun: solar_umbra_cun,
             geometric_blur_cun,
             diffraction_blur_cun,
             total_blur_cun,
             optimal_diameter_cun,
+            airy_disk_radius_cun,
+            f_number,
             signal_to_noise_ratio: snr,
             shadow_edge_sharpness,
+            modulation_transfer_function,
             altitude_resolution_arcmin,
             magnification,
             vignetting_factor: vignetting,
+            physics_model_note,
         }
     }
 }
@@ -225,6 +272,9 @@ impl VirtualExperienceSimulator {
             113.0875,
             420.0,
         );
+
+        let time_accel = request.time_acceleration.unwrap_or(1);
+        let hour_step = (time_accel as f64) * 0.05;
 
         let year = 2024;
         let day_of_year = Self::month_day_to_doy(request.month, request.day, year);
@@ -284,6 +334,13 @@ impl VirtualExperienceSimulator {
 
         let (dynasty_hint, historical_note) = Self::identify_dynasty(request.gauge_height_chi);
 
+        let mut next_hour = request.hour + hour_step;
+        if next_hour >= 24.0 {
+            next_hour -= 24.0;
+        }
+
+        let local_solar_time = if lst >= 0.0 { lst % 24.0 } else { lst + 24.0 };
+
         VirtualExperienceResult {
             gauge_height_chi: request.gauge_height_chi,
             sun_altitude,
@@ -297,22 +354,97 @@ impl VirtualExperienceSimulator {
             is_daytime,
             dynasty_hint,
             historical_note,
+            time_acceleration_applied: time_accel,
+            next_frame_hour: next_hour,
+            local_solar_time_hour: local_solar_time,
+        }
+    }
+
+    pub fn simulate_time_series(request: &VirtualExperienceRequest) -> VirtualTimeSeriesResponse {
+        let time_accel = request.time_acceleration.unwrap_or(60);
+        let (dynasty_hint, historical_note) = Self::identify_dynasty(request.gauge_height_chi);
+
+        let step_minutes = match time_accel {
+            1..=5 => 1.0,
+            6..=30 => 5.0,
+            31..=120 => 10.0,
+            121..=600 => 15.0,
+            _ => 30.0,
+        };
+        let step_hours = step_minutes / 60.0;
+
+        let mut points = Vec::new();
+        let mut sunrise = 99.0;
+        let mut sunset = -1.0;
+        let mut noon_alt = -90.0;
+
+        let mut t = 0.0_f64;
+        while t < 24.0 {
+            let hour = request.hour + t;
+            let wrapped_hour = if hour >= 24.0 { hour - 24.0 } else { hour };
+
+            let sub_req = VirtualExperienceRequest {
+                gauge_height_chi: request.gauge_height_chi,
+                latitude: request.latitude,
+                month: request.month,
+                day: request.day,
+                hour: wrapped_hour,
+                temperature: request.temperature,
+                pressure: request.pressure,
+                humidity: request.humidity,
+                time_acceleration: Some(1),
+            };
+            let point_result = Self::simulate(&sub_req);
+
+            if point_result.is_daytime {
+                if wrapped_hour < sunrise { sunrise = wrapped_hour; }
+                if wrapped_hour > sunset { sunset = wrapped_hour; }
+                if point_result.sun_altitude > noon_alt { noon_alt = point_result.sun_altitude; }
+            }
+
+            points.push(VirtualTimeSeriesPoint {
+                hour: wrapped_hour,
+                sun_altitude: point_result.sun_altitude,
+                shadow_chi: point_result.refracted_shadow_chi,
+                is_daytime: point_result.is_daytime,
+            });
+
+            t += step_hours;
+        }
+
+        points.sort_by(|a, b| a.hour.partial_cmp(&b.hour).unwrap());
+
+        let daylight = if sunset >= sunrise && sunset >= 0.0 && sunrise <= 24.0 {
+            sunset - sunrise
+        } else {
+            0.0
+        };
+
+        VirtualTimeSeriesResponse {
+            points,
+            sunrise_hour: if sunrise < 24.0 { sunrise } else { 6.0 },
+            sunset_hour: if sunset >= 0.0 { sunset } else { 18.0 },
+            noon_altitude: if noon_alt > 0.0 { noon_alt } else { 30.0 },
+            total_daylight_hours: daylight,
+            time_acceleration: time_accel,
+            dynasty_hint,
+            historical_note,
         }
     }
 
     fn identify_dynasty(gauge_height_chi: f64) -> (String, String) {
         if gauge_height_chi <= 10.0 {
             ("周代/汉代".to_string(),
-             "周汉时期表高八尺，为历代基本制度。《周礼》'土圭之法'以此为基准".to_string())
+             "周汉时期表高八尺，为历代基本制度。《周礼·考工记》载'土圭尺有五寸，以至日景'，以洛阳为地中。洛阳金村出土战国铜尺实测23.1cm，八尺合1.848米".to_string())
         } else if gauge_height_chi <= 20.0 {
             ("南北朝/唐代".to_string(),
-             "南朝何承天、唐代一行等曾改进圭表制度，但表高仍以八尺为主".to_string())
+             "南朝何承天制新历，唐代一行组织全国大地测量（开元十二年），使用八尺圭表测量北极高度。南宫说在河南实测子午线一度长351里80步".to_string())
         } else if gauge_height_chi <= 30.0 {
             ("宋代".to_string(),
-             "宋代沈括《景表议》改进测影方法，但表高仍有限".to_string())
+             "宋代沈括《景表议》改进测影方法，指出蒙气差对测影的影响，提出'景符'概念的雏形。宋代圭表仍以八尺为主，精度较前代提升".to_string())
         } else {
             ("元代".to_string(),
-             "郭守敬创四丈高表，以横梁针孔成像提高读数精度，为古代圭表巅峰".to_string())
+             "郭守敬至元十三年(1276)创四丈高表，登封观星台实测台面至铜梁高9.46米(40×0.2365m)。配'景符'针孔成像，读数精度达0.1-0.2分，为古代圭表巅峰，《授时历》精度领先世界300年".to_string())
         }
     }
 

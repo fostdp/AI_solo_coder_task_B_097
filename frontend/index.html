@@ -379,6 +379,20 @@
                     </div>
                 </div>
                 <button class="btn" id="btn-virtual-sim" style="width:100%;margin-bottom:10px">立即测影</button>
+                <div style="margin-bottom:10px">
+                    <div class="param-row">
+                        <label>时间加速</label>
+                        <div style="flex:1;display:flex;gap:6px;align-items:center">
+                            <button class="btn btn-time btn-sm" data-speed="0">暂停</button>
+                            <button class="btn btn-time btn-sm active" data-speed="1">1×</button>
+                            <button class="btn btn-time btn-sm" data-speed="10">10×</button>
+                            <button class="btn btn-time btn-sm" data-speed="60">60×</button>
+                            <button class="btn btn-time btn-sm" data-speed="300">300×</button>
+                            <button class="btn btn-time btn-sm" data-speed="1440">1天/秒</button>
+                        </div>
+                    </div>
+                    <div style="color:#8899aa;font-size:11px;margin-top:4px" id="virtual-time-info">⏱️ 实时：1× 实时模式</div>
+                </div>
                 <div id="virtual-results"></div>
             </div>
             <div class="panel">

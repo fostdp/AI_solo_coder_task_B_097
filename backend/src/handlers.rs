@@ -79,6 +79,7 @@ pub fn create_router(state: HttpAppState) -> Router {
         .route("/api/meridian/compare", post(compare_meridian))
         .route("/api/pinhole/simulate", post(simulate_pinhole))
         .route("/api/virtual/experience", post(virtual_experience))
+        .route("/api/virtual/time_series", post(virtual_experience_time_series))
         .route("/metrics", get(crate::metrics::metrics_handler))
         .route("/ws", get(|ws: WebSocketUpgrade, State(s): State<HttpAppState>| async move {
             crate::alarm_ws::ws_handler(ws, s.alarm).await
@@ -325,5 +326,12 @@ async fn virtual_experience(
     Json(req): Json<VirtualExperienceRequest>,
 ) -> Json<ApiResponse<VirtualExperienceResult>> {
     let result = VirtualExperienceSimulator::simulate(&req);
+    Json(ApiResponse::ok(result))
+}
+
+async fn virtual_experience_time_series(
+    Json(req): Json<VirtualExperienceRequest>,
+) -> Json<ApiResponse<VirtualTimeSeriesResponse>> {
+    let result = VirtualExperienceSimulator::simulate_time_series(&req);
     Json(ApiResponse::ok(result))
 }
