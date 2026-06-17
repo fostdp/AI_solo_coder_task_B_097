@@ -273,3 +273,97 @@ ALTER TABLE monte_carlo_analysis MODIFY TTL analysis_time + INTERVAL 2 YEAR;
 -- 小时统计保留：6个月
 -- ============================================================
 ALTER TABLE hourly_stats MODIFY TTL hour_start + INTERVAL 180 DAY;
+
+-- ============================================================
+-- 7. 朝代圭表预设数据表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS dynasty_gnomons (
+    dynasty_id String COMMENT '朝代圭表ID',
+    dynasty_name String COMMENT '朝代圭表名称',
+    period String COMMENT '时期',
+    gauge_height_chi Float64 COMMENT '表高（尺）',
+    gauge_material String COMMENT '表材',
+    gauge_height_error_std_chi Float64 COMMENT '表高误差标准差（尺）',
+    shadow_reading_error_std_cun Float64 COMMENT '影长读数误差标准差（寸）',
+    latitude Float64 COMMENT '纬度（度）',
+    longitude Float64 COMMENT '经度（度）',
+    altitude Float64 COMMENT '海拔（米）',
+    description String COMMENT '描述',
+    created_at DateTime64(3, 'Asia/Shanghai') DEFAULT now64(3)
+)
+ENGINE = ReplacingMergeTree(created_at)
+ORDER BY dynasty_id
+PRIMARY KEY dynasty_id
+COMMENT '朝代圭表预设数据表';
+
+INSERT INTO dynasty_gnomons (dynasty_id, dynasty_name, period, gauge_height_chi, gauge_material, gauge_height_error_std_chi, shadow_reading_error_std_cun, latitude, longitude, altitude, description) VALUES
+('zhou_tugu', '周代土圭', '公元前11世纪—前256年', 8.0, '土筑', 0.1, 2.0, 34.25, 108.93, 400.0, '《周礼》载土圭之法，表高八尺，以土筑成，精度受限'),
+('han_tongbiao', '汉代铜表', '公元前206年—公元220年', 8.0, '青铜铸造', 0.02, 0.5, 34.26, 108.94, 405.0, '汉代以铜铸表，表高八尺，材质稳定，刻度精确'),
+('yuan_sizhang', '元代四丈高表', '1276年—1368年', 40.0, '砖石砌筑+铜横梁', 0.01, 0.2, 34.4897, 113.0875, 420.0, '郭守敬建登封观星台，表高四丈(40尺)，横梁针孔成像，精度达古代巅峰');
+
+-- ============================================================
+-- 8. 现代子午环仪器数据表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS meridian_instruments (
+    instrument_id String COMMENT '仪器ID',
+    instrument_name String COMMENT '仪器名称',
+    era String COMMENT '年代',
+    angle_resolution_arcsec Float64 COMMENT '角度分辨率（角秒）',
+    time_resolution_ms Float64 COMMENT '时间分辨率（毫秒）',
+    systematic_error_arcsec Float64 COMMENT '系统误差（角秒）',
+    description String COMMENT '描述',
+    created_at DateTime64(3, 'Asia/Shanghai') DEFAULT now64(3)
+)
+ENGINE = ReplacingMergeTree(created_at)
+ORDER BY instrument_id
+PRIMARY KEY instrument_id
+COMMENT '现代子午环仪器数据表';
+
+INSERT INTO meridian_instruments (instrument_id, instrument_name, era, angle_resolution_arcsec, time_resolution_ms, systematic_error_arcsec, description) VALUES
+('yuan_guibiao', '元代四丈高表', '1276', 60.0, 60000, 30.0, '郭守敬高表，影长分辨率约1分，角度分辨率约1角分'),
+('modern_meridian_1900', '20世纪初子午环', '1900', 0.5, 100, 1.0, '经典光学子午环，测微显微镜读数，精度约0.5角秒'),
+('modern_meridian_2000', '现代光电子午环', '2000', 0.01, 1, 0.05, 'CCD光电读数子午环，精度达0.01角秒级别');
+
+-- ============================================================
+-- 9. 针孔成像仿真结果表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS pinhole_simulations (
+    id UUID DEFAULT generateUUIDv4(),
+    gauge_height_chi Float64 COMMENT '表高（尺）',
+    pinhole_diameter_cun Float64 COMMENT '针孔直径（寸）',
+    sun_altitude Float64 COMMENT '太阳高度角（度）',
+    screen_distance_chi Float64 COMMENT '屏距（尺）',
+    sun_image_diameter_cun Float64 COMMENT '太阳像直径（寸）',
+    geometric_blur_cun Float64 COMMENT '几何模糊（寸）',
+    diffraction_blur_cun Float64 COMMENT '衍射模糊（寸）',
+    optimal_diameter_cun Float64 COMMENT '最优针孔直径（寸）',
+    altitude_resolution_arcmin Float64 COMMENT '高度角分辨率（角分）',
+    created_at DateTime64(3, 'Asia/Shanghai') DEFAULT now64(3)
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(created_at)
+ORDER BY created_at
+TTL created_at + INTERVAL 180 DAY
+COMMENT '针孔成像仿真结果表';
+
+-- ============================================================
+-- 10. 虚拟体验记录表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS virtual_experience_log (
+    id UUID DEFAULT generateUUIDv4(),
+    gauge_height_chi Float64 COMMENT '用户设置表高（尺）',
+    latitude Float64 COMMENT '纬度',
+    month UInt32 COMMENT '月份',
+    day UInt32 COMMENT '日期',
+    hour Float64 COMMENT '时辰（小时）',
+    sun_altitude Float64 COMMENT '太阳高度角',
+    shadow_length_chi Float64 COMMENT '影长（尺）',
+    is_daytime UInt8 COMMENT '是否白天',
+    dynasty_hint String COMMENT '朝代提示',
+    created_at DateTime64(3, 'Asia/Shanghai') DEFAULT now64(3)
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(created_at)
+ORDER BY created_at
+TTL created_at + INTERVAL 90 DAY
+COMMENT '公众虚拟体验记录表';

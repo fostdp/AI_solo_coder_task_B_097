@@ -45,5 +45,50 @@
   "units": {
     "chi_to_cun": 10.0,
     "cun_to_mm": 33.33
+  },
+  "dynasty_presets": {
+    "zhou_tugu": {
+      "gauge_height_chi": 8.0,
+      "gauge_material": "土筑",
+      "gauge_height_error_std_chi": 0.1,
+      "shadow_reading_error_std_cun": 2.0,
+      "latitude": 34.25,
+      "longitude": 108.93
+    },
+    "han_tongbiao": {
+      "gauge_height_chi": 8.0,
+      "gauge_material": "青铜铸造",
+      "gauge_height_error_std_chi": 0.02,
+      "shadow_reading_error_std_cun": 0.5,
+      "latitude": 34.26,
+      "longitude": 108.94
+    },
+    "yuan_sizhang": {
+      "gauge_height_chi": 40.0,
+      "gauge_material": "砖石砌筑+铜横梁",
+      "gauge_height_error_std_chi": 0.01,
+      "shadow_reading_error_std_cun": 0.2,
+      "latitude": 34.4897,
+      "longitude": 113.0875
+    }
+  },
+  "pinhole": {
+    "wavelength_nm": 550.0,
+    "sun_angular_diameter_arcmin": 31.6,
+    "default_pinhole_diameter_cun": 1.0,
+    "default_screen_distance_ratio": 1.0,
+    "min_pinhole_diameter_cun": 0.1,
+    "max_pinhole_diameter_cun": 5.0,
+    "diameter_sweep_steps": 20
+  },
+  "virtual_experience": {
+    "default_gauge_height_chi": 8.0,
+    "min_gauge_height_chi": 4.0,
+    "max_gauge_height_chi": 50.0,
+    "gauge_height_step_chi": 1.0,
+    "default_latitude": 34.49,
+    "default_month": 12,
+    "default_day": 22,
+    "default_hour": 12.0
   }
 }

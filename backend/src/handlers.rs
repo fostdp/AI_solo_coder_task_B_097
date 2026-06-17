@@ -14,6 +14,8 @@ use uuid::Uuid;
 
 use crate::alarm_ws::AlarmWsState;
 use crate::dtu_receiver::DtuReceiver;
+use crate::dynasty_comparison::{DynastyComparator, MeridianComparator, PinholeSimulator, VirtualExperienceSimulator};
+use crate::dynasty_models::*;
 use crate::error_analyzer::SharedErrorAnalyzer;
 use crate::models::{
     ApiResponse, MonteCarloConfig, MonteCarloResult, OpticalSimulationResult, SensorMeasurement,
@@ -71,6 +73,12 @@ pub fn create_router(state: HttpAppState) -> Router {
         .route("/api/analyze/monte-carlo", post(run_monte_carlo))
         .route("/api/alerts", get(get_alerts))
         .route("/api/solstice/:year", get(get_winter_solstice))
+        .route("/api/dynasty/presets", get(get_dynasty_presets))
+        .route("/api/dynasty/compare", post(compare_dynasties))
+        .route("/api/meridian/presets", get(get_meridian_presets))
+        .route("/api/meridian/compare", post(compare_meridian))
+        .route("/api/pinhole/simulate", post(simulate_pinhole))
+        .route("/api/virtual/experience", post(virtual_experience))
         .route("/metrics", get(crate::metrics::metrics_handler))
         .route("/ws", get(|ws: WebSocketUpgrade, State(s): State<HttpAppState>| async move {
             crate::alarm_ws::ws_handler(ws, s.alarm).await
@@ -282,4 +290,40 @@ async fn get_winter_solstice(
         OpticalSimulator::new(station.latitude, station.longitude, station.altitude);
     let solstice = simulator.find_winter_solstice(year);
     Json(ApiResponse::ok(solstice))
+}
+
+async fn get_dynasty_presets() -> Json<ApiResponse<Vec<DynastyGnomon>>> {
+    Json(ApiResponse::ok(DynastyGnomon::presets()))
+}
+
+async fn compare_dynasties(
+    Json(req): Json<DynastyComparisonRequest>,
+) -> Json<ApiResponse<Vec<DynastyComparisonResult>>> {
+    let results = DynastyComparator::compare(&req);
+    Json(ApiResponse::ok(results))
+}
+
+async fn get_meridian_presets() -> Json<ApiResponse<Vec<MeridianCircle>>> {
+    Json(ApiResponse::ok(MeridianCircle::presets()))
+}
+
+async fn compare_meridian(
+    Json(req): Json<MeridianComparisonRequest>,
+) -> Json<ApiResponse<Vec<MeridianComparisonResult>>> {
+    let results = MeridianComparator::compare(&req);
+    Json(ApiResponse::ok(results))
+}
+
+async fn simulate_pinhole(
+    Json(req): Json<PinholeRequest>,
+) -> Json<ApiResponse<PinholeResult>> {
+    let result = PinholeSimulator::simulate(&req);
+    Json(ApiResponse::ok(result))
+}
+
+async fn virtual_experience(
+    Json(req): Json<VirtualExperienceRequest>,
+) -> Json<ApiResponse<VirtualExperienceResult>> {
+    let result = VirtualExperienceSimulator::simulate(&req);
+    Json(ApiResponse::ok(result))
 }

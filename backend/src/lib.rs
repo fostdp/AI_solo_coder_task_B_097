@@ -1,5 +1,7 @@
 pub mod alarm_ws;
 pub mod dtu_receiver;
+pub mod dynasty_comparison;
+pub mod dynasty_models;
 pub mod error_analyzer;
 pub mod handlers;
 pub mod metrics;
@@ -12,6 +14,8 @@ pub mod websocket;
 
 pub use alarm_ws::{AlarmConfig, AlarmWsState, ws_handler as alarm_ws_handler, run_alarm_loop};
 pub use dtu_receiver::{DtuReceiver, DtuValidationConfig, new_dtu_channel};
+pub use dynasty_comparison::{DynastyComparator, MeridianComparator, PinholeSimulator, VirtualExperienceSimulator};
+pub use dynasty_models::*;
 pub use error_analyzer::{AnalyzerConfig, ErrorAnalyzerService, SharedErrorAnalyzer};
 pub use handlers::create_router;
 pub use models::*;

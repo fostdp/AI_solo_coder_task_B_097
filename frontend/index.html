@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>古代圭表测影光学仿真与冬至时刻精度分析系统</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: "Microsoft YaHei", "SimHei", sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -20,53 +16,46 @@
         .header {
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px);
-            padding: 15px 30px;
+            padding: 12px 30px;
             border-bottom: 2px solid #c9a959;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .header h1 {
-            font-size: 22px;
-            color: #c9a959;
-            text-shadow: 0 0 10px rgba(201, 169, 89, 0.5);
-        }
-        .header .status {
+        .header h1 { font-size: 20px; color: #c9a959; text-shadow: 0 0 10px rgba(201, 169, 89, 0.5); }
+        .header .status { display: flex; gap: 20px; font-size: 14px; }
+        .status-item { display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff4444; animation: pulse 2s infinite; }
+        .status-dot.connected { background: #44ff44; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .tab-bar {
             display: flex;
-            gap: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(201, 169, 89, 0.2);
+            padding: 0 15px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #8899aa;
             font-size: 14px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            font-family: inherit;
         }
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #ff4444;
-            animation: pulse 2s infinite;
-        }
-        .status-dot.connected {
-            background: #44ff44;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+        .tab-btn:hover { color: #c9a959; }
+        .tab-btn.active { color: #c9a959; border-bottom-color: #c9a959; font-weight: bold; }
+        .tab-content { display: none; padding: 15px; height: calc(100vh - 110px); overflow-y: auto; }
+        .tab-content.active { display: block; }
         .main-container {
             display: grid;
             grid-template-columns: 1fr 380px;
             gap: 15px;
-            padding: 15px;
-            height: calc(100vh - 65px);
+            height: 100%;
         }
-        .left-panel {
-            display: grid;
-            grid-template-rows: 1fr 1fr;
-            gap: 15px;
-        }
+        .left-panel { display: grid; grid-template-rows: 1fr 1fr; gap: 15px; }
         .panel {
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(5px);
@@ -87,165 +76,88 @@
             justify-content: space-between;
             align-items: center;
         }
-        #three-container {
-            flex: 1;
-            width: 100%;
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #canvas-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-        #shadow-canvas-container {
-            flex: 1;
-            width: 100%;
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-            background: rgba(20, 30, 50, 0.8);
-        }
-        #shadow-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        .right-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            overflow-y: auto;
-        }
-        .data-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        .data-card {
-            background: rgba(201, 169, 89, 0.08);
-            border: 1px solid rgba(201, 169, 89, 0.2);
-            border-radius: 8px;
-            padding: 12px;
-        }
-        .data-label {
-            font-size: 11px;
-            color: #8899aa;
-            margin-bottom: 5px;
-        }
-        .data-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #c9a959;
-            font-family: "Consolas", monospace;
-        }
-        .data-unit {
-            font-size: 12px;
-            color: #8899aa;
-            font-weight: normal;
-        }
-        .alert-list {
-            flex: 1;
-            overflow-y: auto;
-        }
-        .alert-item {
-            background: rgba(255, 68, 68, 0.1);
-            border-left: 3px solid #ff4444;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 8px;
-            font-size: 12px;
-        }
-        .alert-item.warning {
-            background: rgba(255, 170, 0, 0.1);
-            border-left-color: #ffaa00;
-        }
-        .alert-item.critical {
-            background: rgba(255, 68, 68, 0.15);
-            border-left-color: #ff2222;
-        }
-        .alert-time {
-            font-size: 10px;
-            color: #8899aa;
-            margin-bottom: 4px;
-        }
-        .alert-msg {
-            color: #e0e0e0;
-            line-height: 1.4;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
+        #three-container { flex: 1; width: 100%; position: relative; border-radius: 8px; overflow: hidden; }
+        #canvas-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        #shadow-canvas-container { flex: 1; width: 100%; position: relative; border-radius: 8px; overflow: hidden; background: rgba(20, 30, 50, 0.8); }
+        #shadow-canvas { width: 100%; height: 100%; display: block; }
+        .right-panel { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .data-card { background: rgba(201, 169, 89, 0.08); border: 1px solid rgba(201, 169, 89, 0.2); border-radius: 8px; padding: 12px; }
+        .data-label { font-size: 11px; color: #8899aa; margin-bottom: 5px; }
+        .data-value { font-size: 18px; font-weight: bold; color: #c9a959; font-family: "Consolas", monospace; }
+        .data-unit { font-size: 12px; color: #8899aa; font-weight: normal; }
+        .alert-list { flex: 1; overflow-y: auto; }
+        .alert-item { background: rgba(255, 68, 68, 0.1); border-left: 3px solid #ff4444; border-radius: 5px; padding: 10px; margin-bottom: 8px; font-size: 12px; }
+        .alert-item.warning { background: rgba(255, 170, 0, 0.1); border-left-color: #ffaa00; }
+        .alert-item.critical { background: rgba(255, 68, 68, 0.15); border-left-color: #ff2222; }
+        .alert-time { font-size: 10px; color: #8899aa; margin-bottom: 4px; }
+        .alert-msg { color: #e0e0e0; line-height: 1.4; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn {
             background: linear-gradient(135deg, #c9a959, #a8892e);
-            color: #1a1a2e;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            font-size: 13px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
+            color: #1a1a2e; border: none; padding: 8px 16px; border-radius: 5px;
+            font-size: 13px; cursor: pointer; font-weight: bold; transition: all 0.3s;
         }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(201, 169, 89, 0.3);
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(201, 169, 89, 0.3); }
+        .btn.secondary { background: rgba(201, 169, 89, 0.2); color: #c9a959; border: 1px solid rgba(201, 169, 89, 0.4); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .simulation-info { font-size: 12px; color: #8899aa; line-height: 1.8; padding: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 5px; }
+        .simulation-info .highlight { color: #c9a959; font-weight: bold; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(201, 169, 89, 0.4); border-radius: 3px; }
+        .legend { display: flex; gap: 15px; font-size: 11px; color: #8899aa; margin-top: 5px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 2px; }
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; height: 100%; }
+        .feature-grid .panel { min-height: 0; }
+        .param-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+        .param-row label { font-size: 12px; color: #8899aa; min-width: 60px; }
+        .param-row input, .param-row select {
+            background: rgba(201, 169, 89, 0.1); border: 1px solid rgba(201, 169, 89, 0.3);
+            color: #c9a959; padding: 5px 8px; border-radius: 4px; font-size: 12px; width: 80px;
+            font-family: Consolas, monospace;
         }
-        .btn.secondary {
-            background: rgba(201, 169, 89, 0.2);
-            color: #c9a959;
-            border: 1px solid rgba(201, 169, 89, 0.4);
+        .param-row input:focus, .param-row select:focus { outline: none; border-color: #c9a959; }
+        .param-row .val-display { color: #c9a959; font-weight: bold; font-size: 13px; min-width: 30px; font-family: Consolas; }
+        .dynasty-table, .meridian-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .dynasty-table th, .meridian-table th {
+            background: rgba(201, 169, 89, 0.15); color: #c9a959; padding: 8px 6px;
+            text-align: center; border-bottom: 1px solid rgba(201, 169, 89, 0.3); font-size: 11px;
         }
-        .simulation-info {
-            font-size: 12px;
-            color: #8899aa;
-            line-height: 1.8;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 5px;
+        .dynasty-table td, .meridian-table td {
+            padding: 7px 6px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-family: Consolas, monospace; font-size: 11px;
         }
-        .simulation-info .highlight {
-            color: #c9a959;
-            font-weight: bold;
+        .dynasty-table tr:hover, .meridian-table tr:hover { background: rgba(201, 169, 89, 0.05); }
+        .dynasty-name { color: #c9a959; font-weight: bold; font-family: "Microsoft YaHei", sans-serif !important; }
+        .meridian-name { color: #88ddff; font-weight: bold; font-family: "Microsoft YaHei", sans-serif !important; }
+        .precision-bar-container { position: relative; height: 18px; }
+        .precision-bar { height: 14px; border-radius: 3px; position: absolute; left: 0; top: 2px; }
+        .precision-text { position: absolute; right: 4px; top: 0; font-size: 10px; line-height: 18px; color: #e0e0e0; }
+        .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .bar-label { font-size: 11px; color: #8899aa; min-width: 100px; }
+        .bar-track { flex: 1; height: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; }
+        .bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .bar-value { font-size: 11px; color: #c9a959; min-width: 60px; text-align: right; font-family: Consolas; }
+        .pinhole-grid, .virtual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .pinhole-grid .data-card, .virtual-grid .data-card { padding: 8px; }
+        .pinhole-grid .data-value, .virtual-grid .data-value { font-size: 14px; }
+        #pinhole-canvas-container, #virtual-canvas-container {
+            flex: 1; width: 100%; position: relative; border-radius: 8px;
+            overflow: hidden; background: rgba(15, 20, 40, 0.9); min-height: 200px;
         }
-        .chart-container {
-            flex: 1;
-            min-height: 150px;
+        #pinhole-canvas, #virtual-canvas { width: 100%; height: 100%; display: block; }
+        .slider-container { display: flex; align-items: center; gap: 8px; }
+        .slider-container input[type="range"] {
+            -webkit-appearance: none; width: 100%; height: 6px;
+            background: rgba(201, 169, 89, 0.2); border-radius: 3px; outline: none;
         }
-        ::-webkit-scrollbar {
-            width: 6px;
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 16px; height: 16px;
+            background: #c9a959; border-radius: 50%; cursor: pointer;
         }
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(201, 169, 89, 0.4);
-            border-radius: 3px;
-        }
-        .legend {
-            display: flex;
-            gap: 15px;
-            font-size: 11px;
-            color: #8899aa;
-            margin-top: 5px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-        }
+        .meridian-chart { margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -262,120 +174,216 @@
         </div>
     </div>
 
-    <div class="main-container">
-        <div class="left-panel">
-            <div class="panel">
-                <div class="panel-title">
-                    <span>圭表三维光学仿真</span>
-                    <div class="legend">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #c9a959;"></div>
-                            <span>圭表</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #ffdd44;"></div>
-                            <span>太阳光线</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #333;"></div>
-                            <span>影子</span>
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="realtime">实时仿真</button>
+        <button class="tab-btn" data-tab="dynasty">朝代对比</button>
+        <button class="tab-btn" data-tab="meridian">跨时代对比</button>
+        <button class="tab-btn" data-tab="pinhole">针孔成像</button>
+        <button class="tab-btn" data-tab="virtual">虚拟体验</button>
+    </div>
+
+    <!-- Tab 1: Original Realtime -->
+    <div class="tab-content active" id="tab-realtime">
+        <div class="main-container">
+            <div class="left-panel">
+                <div class="panel">
+                    <div class="panel-title">
+                        <span>圭表三维光学仿真</span>
+                        <div class="legend">
+                            <div class="legend-item"><div class="legend-color" style="background: #c9a959;"></div><span>圭表</span></div>
+                            <div class="legend-item"><div class="legend-color" style="background: #ffdd44;"></div><span>太阳光线</span></div>
+                            <div class="legend-item"><div class="legend-color" style="background: #333;"></div><span>影子</span></div>
                         </div>
                     </div>
+                    <div id="three-container"><canvas id="canvas-overlay"></canvas></div>
                 </div>
-                <div id="three-container">
-                    <canvas id="canvas-overlay"></canvas>
+                <div class="panel">
+                    <div class="panel-title">
+                        <span>圭表侧视投影与光线粒子仿真</span>
+                        <div class="controls">
+                            <button class="btn secondary" id="toggle-particles">粒子: 开</button>
+                            <button class="btn secondary" id="toggle-labels">标注: 开</button>
+                        </div>
+                    </div>
+                    <div id="shadow-canvas-container"><canvas id="shadow-canvas"></canvas></div>
                 </div>
             </div>
-            <div class="panel">
-                <div class="panel-title">
-                    <span>圭表侧视投影与光线粒子仿真</span>
-                    <div class="controls">
-                        <button class="btn secondary" id="toggle-particles">粒子: 开</button>
-                        <button class="btn secondary" id="toggle-labels">标注: 开</button>
+            <div class="right-panel">
+                <div class="panel">
+                    <div class="panel-title">实时测量数据</div>
+                    <div class="data-grid">
+                        <div class="data-card"><div class="data-label">测量时间</div><div class="data-value" id="m-time">--</div></div>
+                        <div class="data-card"><div class="data-label">表高</div><div class="data-value" id="m-gauge">-- <span class="data-unit">尺</span></div></div>
+                        <div class="data-card"><div class="data-label">影长</div><div class="data-value" id="m-shadow">-- <span class="data-unit">尺</span></div></div>
+                        <div class="data-card"><div class="data-label">影长</div><div class="data-value" id="m-shadow-cun">-- <span class="data-unit">寸</span></div></div>
+                        <div class="data-card"><div class="data-label">太阳高度角</div><div class="data-value" id="m-alt">-- <span class="data-unit">°</span></div></div>
+                        <div class="data-card"><div class="data-label">太阳方位角</div><div class="data-value" id="m-azi">-- <span class="data-unit">°</span></div></div>
+                        <div class="data-card"><div class="data-label">大气折射率</div><div class="data-value" id="m-refr">--</div></div>
+                        <div class="data-card"><div class="data-label">气温/气压</div><div class="data-value" id="m-tp">--</div></div>
                     </div>
                 </div>
-                <div id="shadow-canvas-container">
-                    <canvas id="shadow-canvas"></canvas>
+                <div class="panel">
+                    <div class="panel-title"><span>光学仿真结果</span></div>
+                    <div class="simulation-info">
+                        <div>真实太阳高度角: <span class="highlight" id="s-true-alt">--</span>°</div>
+                        <div>视太阳高度角: <span class="highlight" id="s-app-alt">--</span>°</div>
+                        <div>蒙气差修正: <span class="highlight" id="s-refr-corr">--</span> 角秒</div>
+                        <div>地球曲率修正: <span class="highlight" id="s-curv-corr">--</span> 尺</div>
+                        <div>理论影长: <span class="highlight" id="s-theo-shadow">--</span> 尺</div>
+                        <div>折射影长: <span class="highlight" id="s-refr-shadow">--</span> 尺</div>
+                        <div>影长偏差: <span class="highlight" id="s-deviation">--</span> 寸</div>
+                        <div>冬至时刻: <span class="highlight" id="s-solstice">--</span></div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn" id="btn-monte-carlo" style="width: 100%;">运行蒙特卡洛误差分析</button>
+                    </div>
+                    <div id="mc-result" style="margin-top: 10px; font-size: 11px; display: none;">
+                        <div>模拟次数: <span class="highlight" id="mc-count">--</span></div>
+                        <div>影长标准差: <span class="highlight" id="mc-shadow-std">--</span> 尺</div>
+                        <div>影长95%置信区间: [<span class="highlight" id="mc-shadow-ci">--</span>] 尺</div>
+                        <div>冬至时刻标准差: <span class="highlight" id="mc-sol-std">--</span> 秒</div>
+                        <div>合成标准不确定度: <span class="highlight" id="mc-combined">--</span></div>
+                        <div>扩展不确定度(k=2): <span class="highlight" id="mc-expanded">--</span></div>
+                    </div>
+                </div>
+                <div class="panel" style="flex: 1;">
+                    <div class="panel-title"><span>告警事件</span><span style="font-size: 12px; color: #8899aa;">阈值: 1寸</span></div>
+                    <div class="alert-list" id="alert-list">
+                        <div style="color: #666; font-size: 12px; text-align: center; padding: 20px;">暂无告警</div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="right-panel">
+    <!-- Tab 2: Dynasty Comparison -->
+    <div class="tab-content" id="tab-dynasty">
+        <div class="feature-grid">
             <div class="panel">
-                <div class="panel-title">实时测量数据</div>
-                <div class="data-grid">
-                    <div class="data-card">
-                        <div class="data-label">测量时间</div>
-                        <div class="data-value" id="m-time">--</div>
-                    </div>
-                    <div class="data-card">
-                        <div class="data-label">表高</div>
-                        <div class="data-value" id="m-gauge">-- <span class="data-unit">尺</span></div>
-                    </div>
-                    <div class="data-card">
-                        <div class="data-label">影长</div>
-                        <div class="data-value" id="m-shadow">-- <span class="data-unit">尺</span></div>
-                    </div>
-                    <div class="data-card">
-                        <div class="data-label">影长</div>
-                        <div class="data-value" id="m-shadow-cun">-- <span class="data-unit">寸</span></div>
-                    </div>
-                    <div class="data-card">
-                        <div class="data-label">太阳高度角</div>
-                        <div class="data-value" id="m-alt">-- <span class="data-unit">°</span></div>
-                    </div>
-                    <div class="data-card">
-                        <div class="data-label">太阳方位角</div>
-                        <div class="data-value" id="m-azi">-- <span class="data-unit">°</span></div>
-                    </div>
-                    <div class="data-card">
-                        <div class="data-label">大气折射率</div>
-                        <div class="data-value" id="m-refr">--</div>
-                    </div>
-                    <div class="data-card">
-                        <div class="data-label">气温/气压</div>
-                        <div class="data-value" id="m-tp">--</div>
-                    </div>
+                <div class="panel-title">跨朝代圭表精度对比</div>
+                <div class="param-row">
+                    <label>太阳高度角</label><input type="number" id="dynasty-alt" value="26.0" step="0.1" min="-5" max="90">
+                    <label>气温°C</label><input type="number" id="dynasty-temp" value="5.0" step="0.5">
                 </div>
+                <div class="param-row">
+                    <label>气压hPa</label><input type="number" id="dynasty-pressure" value="1013.25" step="0.5">
+                    <label>湿度%</label><input type="number" id="dynasty-humidity" value="50" step="1">
+                </div>
+                <div style="margin: 10px 0;">
+                    <button class="btn" id="btn-dynasty-compare" style="width:100%">跨朝代精度对比</button>
+                </div>
+                <div id="dynasty-results" style="overflow-x:auto; flex:1;"></div>
             </div>
-
             <div class="panel">
-                <div class="panel-title">
-                    <span>光学仿真结果</span>
-                </div>
+                <div class="panel-title">朝代圭表说明</div>
                 <div class="simulation-info">
-                    <div>真实太阳高度角: <span class="highlight" id="s-true-alt">--</span>°</div>
-                    <div>视太阳高度角: <span class="highlight" id="s-app-alt">--</span>°</div>
-                    <div>蒙气差修正: <span class="highlight" id="s-refr-corr">--</span> 角秒</div>
-                    <div>地球曲率修正: <span class="highlight" id="s-curv-corr">--</span> 尺</div>
-                    <div>理论影长: <span class="highlight" id="s-theo-shadow">--</span> 尺</div>
-                    <div>折射影长: <span class="highlight" id="s-refr-shadow">--</span> 尺</div>
-                    <div>影长偏差: <span class="highlight" id="s-deviation">--</span> 寸</div>
-                    <div>冬至时刻: <span class="highlight" id="s-solstice">--</span></div>
+                    <div style="margin-bottom:8px"><span class="highlight">周代土圭</span>：表高八尺，土筑而成。《周礼·地官》"以土圭之法测土深，正日景以求地中"，精度约2寸，冬至时刻误差约数小时</div>
+                    <div style="margin-bottom:8px"><span class="highlight">汉代铜表</span>：青铜铸表，表高八尺。材质稳定，刻度精确，精度约0.5寸，冬至时刻误差约1小时</div>
+                    <div style="margin-bottom:8px"><span class="highlight">元代四丈高表</span>：郭守敬创制，表高四丈(40尺)，以横梁针孔成像提高读数精度，精度约0.2寸，冬至时刻误差约数分钟</div>
                 </div>
-                <div style="margin-top: 10px;">
-                    <button class="btn" id="btn-monte-carlo" style="width: 100%;">运行蒙特卡洛误差分析</button>
-                </div>
-                <div id="mc-result" style="margin-top: 10px; font-size: 11px; display: none;">
-                    <div>模拟次数: <span class="highlight" id="mc-count">--</span></div>
-                    <div>影长标准差: <span class="highlight" id="mc-shadow-std">--</span> 尺</div>
-                    <div>影长95%置信区间: [<span class="highlight" id="mc-shadow-ci">--</span>] 尺</div>
-                    <div>冬至时刻标准差: <span class="highlight" id="mc-sol-std">--</span> 秒</div>
-                    <div>合成标准不确定度: <span class="highlight" id="mc-combined">--</span></div>
-                    <div>扩展不确定度(k=2): <span class="highlight" id="mc-expanded">--</span></div>
+                <div style="margin-top:10px; font-size:11px; color:#8899aa; line-height:1.6; padding:10px; background:rgba(0,0,0,0.2); border-radius:5px;">
+                    表高增加使影长按比例放大，读数相对误差减小。元代高表将表高从8尺增至40尺(5倍)，影长同步放大5倍，使同样的绝对读数误差对应的相对误差降为1/5，这是郭守敬《授时历》精度领先世界的核心技术创新之一。
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="panel" style="flex: 1;">
-                <div class="panel-title">
-                    <span>告警事件</span>
-                    <span style="font-size: 12px; color: #8899aa;">阈值: 1寸</span>
+    <!-- Tab 3: Meridian Circle Comparison -->
+    <div class="tab-content" id="tab-meridian">
+        <div class="feature-grid">
+            <div class="panel">
+                <div class="panel-title">古代圭表 vs 现代子午环</div>
+                <div class="param-row">
+                    <label>太阳高度角</label><input type="number" id="meridian-alt" value="26.0" step="0.1" min="-5" max="90">
+                    <label>气温°C</label><input type="number" id="meridian-temp" value="5.0" step="0.5">
+                    <label>气压hPa</label><input type="number" id="meridian-pressure" value="1013.25" step="0.5">
                 </div>
-                <div class="alert-list" id="alert-list">
-                    <div style="color: #666; font-size: 12px; text-align: center; padding: 20px;">
-                        暂无告警
+                <div style="margin: 10px 0;">
+                    <button class="btn" id="btn-meridian-compare" style="width:100%">跨时代测量对比</button>
+                </div>
+                <div id="meridian-results" style="overflow-x:auto; flex:1;"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">技术演进说明</div>
+                <div class="simulation-info">
+                    <div style="margin-bottom:8px"><span class="highlight">元代圭表(1276)</span>：角度分辨率约1角分(60角秒)，系统误差约30角秒，冬至时刻精度约分钟级</div>
+                    <div style="margin-bottom:8px"><span class="highlight">20世纪子午环(1900)</span>：测微显微镜读数，角度分辨率0.5角秒，系统误差约1角秒，冬至精度秒级</div>
+                    <div style="margin-bottom:8px"><span class="highlight">现代光电子午环(2000)</span>：CCD光电读数，角度分辨率0.01角秒，系统误差0.05角秒，精度毫秒级</div>
+                </div>
+                <div style="margin-top:10px; font-size:11px; color:#8899aa; line-height:1.6; padding:10px; background:rgba(0,0,0,0.2); border-radius:5px;">
+                    从元代圭表到现代光电子午环，测量精度提升了约3个数量级(1200倍)。但令人惊叹的是，郭守敬仅凭圭表测影，在1280年测定的回归年长度为365.2425日，与现代值365.24220日仅差26秒，这比欧洲格里高利历早了300年。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Pinhole Camera -->
+    <div class="tab-content" id="tab-pinhole">
+        <div class="feature-grid">
+            <div class="panel">
+                <div class="panel-title">针孔成像参数</div>
+                <div class="param-row">
+                    <label>表高(尺)</label><input type="number" id="pinhole-gauge" value="40" step="1" min="4" max="50">
+                    <label>孔径(寸)</label><input type="number" id="pinhole-diameter" value="1.0" step="0.1" min="0.1" max="5">
+                </div>
+                <div class="param-row">
+                    <label>高度角°</label><input type="number" id="pinhole-alt" value="26.0" step="0.5" min="1" max="90">
+                    <label>屏距(尺)</label><input type="number" id="pinhole-distance" value="40" step="1" min="4" max="50">
+                </div>
+                <div class="param-row">
+                    <label>气温°C</label><input type="number" id="pinhole-temp" value="5.0" step="0.5">
+                    <label>气压hPa</label><input type="number" id="pinhole-pressure" value="1013.25" step="0.5">
+                </div>
+                <div style="display:flex; gap:10px; margin: 10px 0;">
+                    <button class="btn" id="btn-pinhole-sim" style="flex:1">针孔成像仿真</button>
+                    <button class="btn secondary" id="btn-pinhole-sweep" style="flex:1">针孔直径扫描</button>
+                </div>
+                <div id="pinhole-results"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">针孔成像示意图</div>
+                <div id="pinhole-canvas-container"><canvas id="pinhole-canvas"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 5: Virtual Experience -->
+    <div class="tab-content" id="tab-virtual">
+        <div class="feature-grid">
+            <div class="panel">
+                <div class="panel-title">🏛️ 虚拟圭表测影体验</div>
+                <div style="margin-bottom:12px;">
+                    <div class="param-row">
+                        <label>表高(尺)</label>
+                        <div class="slider-container" style="flex:1">
+                            <input type="range" id="virtual-gauge" min="4" max="50" step="1" value="8">
+                            <span class="val-display" id="virtual-gauge-val">8</span>
+                        </div>
+                    </div>
+                    <div class="param-row">
+                        <label>时辰(时)</label>
+                        <div class="slider-container" style="flex:1">
+                            <input type="range" id="virtual-hour" min="0" max="24" step="0.5" value="12">
+                            <span class="val-display" id="virtual-hour-val">12</span>
+                        </div>
+                    </div>
+                    <div class="param-row">
+                        <label>月份</label><input type="number" id="virtual-month" value="12" min="1" max="12">
+                        <label>日期</label><input type="number" id="virtual-day" value="22" min="1" max="31">
+                        <label>纬度°</label><input type="number" id="virtual-latitude" value="34.49" step="0.01">
+                    </div>
+                    <div class="param-row">
+                        <label>气温°C</label><input type="number" id="virtual-temp" value="5.0" step="0.5">
+                        <label>气压hPa</label><input type="number" id="virtual-pressure" value="1013.0" step="0.5">
+                        <label>湿度%</label><input type="number" id="virtual-humidity" value="50" step="1">
                     </div>
                 </div>
+                <button class="btn" id="btn-virtual-sim" style="width:100%;margin-bottom:10px">立即测影</button>
+                <div id="virtual-results"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">圭表测影实时画面</div>
+                <div id="virtual-canvas-container"><canvas id="virtual-canvas"></canvas></div>
             </div>
         </div>
     </div>
@@ -383,6 +391,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="gnomon_3d.js"></script>
     <script src="shadow_panel.js"></script>
+    <script src="dynasty_panel.js"></script>
+    <script src="meridian_panel.js"></script>
+    <script src="pinhole_panel.js"></script>
+    <script src="virtual_experience.js"></script>
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+                if (btn.dataset.tab === 'realtime') {
+                    if (window.Gnomon3D) window.Gnomon3D.onWindowResize && window.Gnomon3D.onWindowResize();
+                }
+            });
+        });
+    </script>
     <script src="app.js"></script>
 </body>
 </html>

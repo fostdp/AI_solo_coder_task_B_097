@@ -234,6 +234,20 @@ const App = (function () {
         setInterval(updateClock, 1000);
         updateClock();
 
+        const { API_URL } = resolveEndpoints();
+        if (window.DynastyPanel) {
+            window.DynastyPanel.init(API_URL);
+        }
+        if (window.MeridianPanel) {
+            window.MeridianPanel.init(API_URL);
+        }
+        if (window.PinholePanel) {
+            window.PinholePanel.init(API_URL);
+        }
+        if (window.VirtualExperience) {
+            window.VirtualExperience.init(API_URL);
+        }
+
         document.getElementById('btn-monte-carlo').addEventListener('click', runMonteCarlo);
         document.getElementById('toggle-particles').addEventListener('click', (e) => {
             showParticles = !showParticles;
