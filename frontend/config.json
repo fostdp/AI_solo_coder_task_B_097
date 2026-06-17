@@ -1,0 +1,67 @@
+{
+  "api": {
+    "base_url_auto": true,
+    "fallback_base_url": "http://localhost:3000",
+    "ws_path": "/ws"
+  },
+  "render": {
+    "chi_scale": 0.5,
+    "gauge_height_chi": 40,
+    "ruler_length_chi": 120,
+    "default_sun_altitude": 30,
+    "default_sun_azimuth": 180,
+    "particle_count_3d": 200,
+    "particle_count_2d": 100
+  },
+  "tier_config": {
+    "low": {
+      "shadow_map_size": 1024,
+      "dpr_cap": 1.5,
+      "antialias": false,
+      "shadow_bias": -0.0008,
+      "shadow_normal_bias": 0.04,
+      "shadow_radius": 2
+    },
+    "medium": {
+      "shadow_map_size": 2048,
+      "dpr_cap": 2.0,
+      "antialias": true,
+      "shadow_bias": -0.0005,
+      "shadow_normal_bias": 0.06,
+      "shadow_radius": 4
+    },
+    "high": {
+      "shadow_map_size": 4096,
+      "dpr_cap": 2.5,
+      "antialias": true,
+      "shadow_bias": -0.0003,
+      "shadow_normal_bias": 0.06,
+      "shadow_radius": 6
+    }
+  },
+  "colors": {
+    "scene_background": "0x0a0a1a",
+    "fog_color": "0x0a0a1a",
+    "ground": "0x5a4a3a",
+    "gauge": "0xc9a959",
+    "gauge_top": "0xd4b866",
+    "ruler": "0xd4c4a4",
+    "sun_light": "0xfff0c8",
+    "hemisphere_sky": "0xfff1d6",
+    "hemisphere_ground": "0x443322",
+    "beam": "0xfff5d4"
+  },
+  "pcf_soft_shadow": {
+    "blur_px": 1.5,
+    "layers": [
+      { "dx": 0,    "dy": 0,     "a": 0.35, "yOff": 0 },
+      { "dx": 0.8,  "dy": 0.4,   "a": 0.12, "yOff": 1 },
+      { "dx": -0.8, "dy": -0.4,  "a": 0.12, "yOff": -1 },
+      { "dx": 0.6,  "dy": -0.5,  "a": 0.10, "yOff": 0 },
+      { "dx": -0.6, "dy": 0.5,   "a": 0.10, "yOff": 1 },
+      { "dx": 1.2,  "dy": 0,     "a": 0.09, "yOff": 1 },
+      { "dx": -1.2, "dy": 0,     "a": 0.09, "yOff": -1 },
+      { "dx": 0,    "dy": 1.0,   "a": 0.08, "yOff": 2 }
+    ]
+  }
+}

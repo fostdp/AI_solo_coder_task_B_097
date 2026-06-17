@@ -1,0 +1,30 @@
+{
+  "_description": "大气分层与折射模型配置（分层大气蒙气差 + Bennett 经验式融合）",
+  "standard": {
+    "surface_temperature_k": 288.15,
+    "surface_pressure_hpa": 1013.25,
+    "lapse_rate_standard_k_per_m": -0.0065,
+    "lapse_rate_upper_k_per_m": -0.0028,
+    "atmosphere_top_km": 50.0,
+    "min_temperature_k": 180.0,
+    "refractive_coeff_dry": 0.000077624,
+    "refractive_coeff_wet": -0.00001292
+  },
+  "layering": {
+    "near_surface_layers": 40,
+    "near_surface_step_m": 50,
+    "high_altitude_layers": 20,
+    "high_altitude_min_step_km": 0.5
+  },
+  "thresholds": {
+    "low_altitude_deg": 5.0,
+    "horizon_amplification_deg": 2.0,
+    "horizon_amplification_factor": 0.35,
+    "layered_weight": 0.4,
+    "standard_weight": 0.6
+  },
+  "earth_geometry": {
+    "radius_km": 6371.0,
+    "chi_to_m": 0.3333
+  }
+}
