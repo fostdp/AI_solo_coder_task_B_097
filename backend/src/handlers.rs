@@ -16,12 +16,17 @@ use crate::alarm_ws::AlarmWsState;
 use crate::dtu_receiver::DtuReceiver;
 use crate::dynasty_comparison::{DynastyComparator, MeridianComparator, PinholeSimulator, VirtualExperienceSimulator};
 use crate::dynasty_models::*;
+use crate::era_comparator::EraComparator;
 use crate::error_analyzer::SharedErrorAnalyzer;
 use crate::models::{
     ApiResponse, MonteCarloConfig, MonteCarloResult, OpticalSimulationResult, SensorMeasurement,
 };
+use crate::monte_carlo_pool::MonteCarloThreadPool;
 use crate::optics::OpticalSimulator;
+use crate::pinhole_optimizer::PinholeOptimizer;
+use crate::precision_comparator::PrecisionComparator;
 use crate::storage::SharedStore;
+use crate::vr_gnomon::VrGnomon;
 
 const DEFAULT_STATION_ID: &str = "dengfeng_001";
 
@@ -31,6 +36,7 @@ pub struct HttpAppState {
     pub dtu: Arc<DtuReceiver>,
     pub analyzer: SharedErrorAnalyzer,
     pub alarm: AlarmWsState,
+    pub monte_carlo_pool: Arc<MonteCarloThreadPool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,6 +86,14 @@ pub fn create_router(state: HttpAppState) -> Router {
         .route("/api/pinhole/simulate", post(simulate_pinhole))
         .route("/api/virtual/experience", post(virtual_experience))
         .route("/api/virtual/time_series", post(virtual_experience_time_series))
+        .route("/api/v2/precision/compare", post(compare_precision_v2))
+        .route("/api/v2/era/compare", post(compare_era_v2))
+        .route("/api/v2/pinhole/optimize", post(optimize_pinhole_v2))
+        .route("/api/v2/pinhole/scan", post(scan_pinhole_v2))
+        .route("/api/v2/vr/simulate", post(vr_simulate_v2))
+        .route("/api/v2/vr/time_series", post(vr_time_series_v2))
+        .route("/api/monte_carlo/analyze", post(monte_carlo_analyze))
+        .route("/api/monte_carlo/batch", post(monte_carlo_batch))
         .route("/metrics", get(crate::metrics::metrics_handler))
         .route("/ws", get(|ws: WebSocketUpgrade, State(s): State<HttpAppState>| async move {
             crate::alarm_ws::ws_handler(ws, s.alarm).await
@@ -334,4 +348,84 @@ async fn virtual_experience_time_series(
 ) -> Json<ApiResponse<VirtualTimeSeriesResponse>> {
     let result = VirtualExperienceSimulator::simulate_time_series(&req);
     Json(ApiResponse::ok(result))
+}
+
+async fn compare_precision_v2(
+    Json(req): Json<DynastyComparisonRequest>,
+) -> Json<ApiResponse<Vec<DynastyComparisonResult>>> {
+    let results = PrecisionComparator::compare(&req);
+    Json(ApiResponse::ok(results))
+}
+
+async fn compare_era_v2(
+    Json(req): Json<MeridianComparisonRequest>,
+) -> Json<ApiResponse<Vec<MeridianComparisonResult>>> {
+    let results = EraComparator::compare(&req);
+    Json(ApiResponse::ok(results))
+}
+
+async fn optimize_pinhole_v2(
+    Json(req): Json<PinholeRequest>,
+) -> Json<ApiResponse<PinholeResult>> {
+    let result = PinholeOptimizer::simulate(&req);
+    Json(ApiResponse::ok(result))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PinholeScanRequest {
+    pub gauge_height_chi: f64,
+    pub min_diameter_cun: f64,
+    pub max_diameter_cun: f64,
+    pub steps: usize,
+}
+
+async fn scan_pinhole_v2(
+    Json(req): Json<PinholeScanRequest>,
+) -> Json<ApiResponse<Vec<(f64, f64)>>> {
+    let results = PinholeOptimizer::scan_optimal_diameter(
+        req.gauge_height_chi,
+        req.min_diameter_cun,
+        req.max_diameter_cun,
+        req.steps,
+    );
+    Json(ApiResponse::ok(results))
+}
+
+async fn vr_simulate_v2(
+    Json(req): Json<VirtualExperienceRequest>,
+) -> Json<ApiResponse<VirtualExperienceResult>> {
+    let result = VrGnomon::simulate(&req);
+    Json(ApiResponse::ok(result))
+}
+
+async fn vr_time_series_v2(
+    Json(req): Json<VirtualExperienceRequest>,
+) -> Json<ApiResponse<VirtualTimeSeriesResponse>> {
+    let result = VrGnomon::simulate_time_series(&req);
+    Json(ApiResponse::ok(result))
+}
+
+async fn monte_carlo_analyze(
+    State(state): State<HttpAppState>,
+    Json(req): Json<(SensorMeasurement, MonteCarloConfig)>,
+) -> Json<ApiResponse<MonteCarloResult>> {
+    match state.monte_carlo_pool.analyze_single(req.0, req.1).await {
+        Ok(result) => Json(ApiResponse::ok(result)),
+        Err(e) => Json(ApiResponse::err(&e)),
+    }
+}
+
+async fn monte_carlo_batch(
+    State(state): State<HttpAppState>,
+    Json(req): Json<(Vec<SensorMeasurement>, MonteCarloConfig)>,
+) -> Json<ApiResponse<Vec<MonteCarloResult>>> {
+    let results = state.monte_carlo_pool.analyze_batch(req.0, req.1).await;
+    let mut successful = Vec::new();
+    for r in results {
+        match r {
+            Ok(mc) => successful.push(mc),
+            Err(e) => tracing::warn!("蒙特卡洛分析失败: {}", e),
+        }
+    }
+    Json(ApiResponse::ok(successful))
 }

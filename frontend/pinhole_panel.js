@@ -43,7 +43,7 @@ const PinholePanel = (function () {
             const temp = parseFloat(document.getElementById('pinhole-temp').value) || 5.0;
             const pressure = parseFloat(document.getElementById('pinhole-pressure').value) || 1013.25;
 
-            const resp = await fetch(`${API_URL}/api/pinhole/simulate`, {
+            const resp = await fetch(`${API_URL}/api/v2/pinhole/optimize`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -80,22 +80,35 @@ const PinholePanel = (function () {
             const temp = parseFloat(document.getElementById('pinhole-temp').value) || 5.0;
             const pressure = parseFloat(document.getElementById('pinhole-pressure').value) || 1013.25;
 
-            for (let d = 0.1; d <= 5.0; d += 0.25) {
-                const resp = await fetch(`${API_URL}/api/pinhole/simulate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        gauge_height_chi: gauge,
-                        pinhole_diameter_cun: d,
-                        sun_altitude: alt,
-                        screen_distance_chi: distance,
-                        temperature: temp,
-                        pressure: pressure,
-                    }),
-                });
-                const result = await resp.json();
-                if (result.success && result.data) {
-                    sweepData.push(result.data);
+            const resp = await fetch(`${API_URL}/api/v2/pinhole/scan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gauge_height_chi: gauge,
+                    min_diameter_cun: 0.1,
+                    max_diameter_cun: 5.0,
+                    steps: 20,
+                }),
+            });
+            const result = await resp.json();
+            if (result.success && result.data) {
+                for (const [d, blur] of result.data) {
+                    const detailResp = await fetch(`${API_URL}/api/v2/pinhole/optimize`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gauge_height_chi: gauge,
+                            pinhole_diameter_cun: d,
+                            sun_altitude: alt,
+                            screen_distance_chi: distance,
+                            temperature: temp,
+                            pressure: pressure,
+                        }),
+                    });
+                    const detail = await detailResp.json();
+                    if (detail.success && detail.data) {
+                        sweepData.push(detail.data);
+                    }
                 }
             }
             drawSweepChart();

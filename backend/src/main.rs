@@ -11,6 +11,7 @@ use guibiao_backend::ClickHouseStore;
 use guibiao_backend::dtu_receiver::{DtuReceiver, DtuValidationConfig};
 use guibiao_backend::error_analyzer::{AnalyzerConfig, ErrorAnalyzerService};
 use guibiao_backend::handlers::{create_router, HttpAppState};
+use guibiao_backend::monte_carlo_pool::MonteCarloThreadPool;
 use guibiao_backend::optical_simulator::{
     new_simulator_channel,
     run_simulator_loop,
@@ -113,6 +114,7 @@ async fn main() -> Result<()> {
     let dtu = Arc::new(DtuReceiver::new(store.clone(), dtu_cfg, dtu_tx));
     let alarm_state = AlarmWsState::new(store.clone(), alarm_cfg);
     let analyzer = Arc::new(ErrorAnalyzerService::new(store.clone(), analyzer_cfg));
+    let monte_carlo_pool = Arc::new(MonteCarloThreadPool::with_default_config());
 
     let sim_store = store.clone();
     tokio::spawn(async move {
@@ -129,6 +131,7 @@ async fn main() -> Result<()> {
         dtu,
         analyzer,
         alarm: alarm_state,
+        monte_carlo_pool,
     };
     let app: Router = create_router(http_state);
 

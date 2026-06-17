@@ -247,6 +247,15 @@ const App = (function () {
         if (window.VirtualExperience) {
             window.VirtualExperience.init(API_URL);
         }
+        if (window.PrecisionPanel) {
+            window.PrecisionPanel.init(API_URL);
+        }
+        if (window.EraPanel) {
+            window.EraPanel.init(API_URL);
+        }
+        if (window.VrPanel) {
+            window.VrPanel.init(API_URL);
+        }
 
         document.getElementById('btn-monte-carlo').addEventListener('click', runMonteCarlo);
         document.getElementById('toggle-particles').addEventListener('click', (e) => {
